@@ -1,0 +1,8 @@
+# Ignore the media folder
+/media/
+
+# Ignore the db folder
+/db/
+
+# Ignore .ignore.txt file
+.ignore.txt
