@@ -18,7 +18,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.crypto import get_random_string
 
-BOT_TOKEN = "BOT_TOKEN"
+BOT_TOKEN = "7942185037:AAGHRARwj9S388Im3LZLsjrm4wj2a7bqno8"
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 @csrf_exempt
@@ -33,7 +33,7 @@ def auth_view(request):
 
         # Check expiry (Optional, but highly recommended)
         auth_date = int(parsed_data.get("auth_date", 0))
-        if time.time() - auth_date > 86400:  # 1-day expiry
+        if time.time() - auth_date > 86400:  # 1-day expiry 86400
             return JsonResponse({"error": "Session expired"}, status=403)
 
         # Validate the hash using HMAC and your bot token
@@ -58,7 +58,7 @@ def auth_view(request):
             defaults={
                 "first_name": first_name,
                 "username": username,
-                "avatar_url": avatar_url
+                "avatar": avatar_url
             }
         )
 
