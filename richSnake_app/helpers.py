@@ -23,28 +23,37 @@ def validate_init_data(init_data: str, bot_token: str):
 def get_telegram_user_photo(telegram_id):
     """Fetches the Telegram user's avatar photo URL."""
     try:
+        # Step 1: Request user's profile photos
         response = requests.get(f"{TELEGRAM_API_URL}/getUserProfilePhotos", params={
             "user_id": telegram_id,
             "limit": 1  # Fetch only the first photo
         })
-        data = response.json()
+        response.raise_for_status()  # Raises HTTPError for bad responses
 
+        # Parse JSON response
+        data = response.json()
         if data.get("ok") and data["result"]["total_count"] > 0:
             # Get the file ID of the user's photo
             file_id = data["result"]["photos"][0][0]["file_id"]
 
-            # Request the file path using the file ID
+            # Step 2: Request the file path using the file ID
             file_response = requests.get(
                 f"{TELEGRAM_API_URL}/getFile", params={"file_id": file_id})
-            file_data = file_response.json()
+            file_response.raise_for_status()
 
+            # Parse JSON response for file data
+            file_data = file_response.json()
             if file_data.get("ok"):
-                # Construct the file URL
+                # Construct and return the file URL
                 file_path = file_data["result"]["file_path"]
                 return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
 
-    except requests.RequestException:
-        # Handle request failure (e.g., network issues)
-        pass
+    except requests.RequestException as e:
+        # Log or handle network issues here
+        print("Network error:", e)
+    except ValueError as e:
+        # Handle JSON decode error if the response isn't JSON
+        print("JSON decoding error:", e)
 
-    return None  # Return None if no photo is found or if an error occurs
+    # Return None if no photo is found or if any error occurs
+    return None

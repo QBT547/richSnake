@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
 class Task(models.Model):
@@ -15,9 +16,8 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
-class User(models.Model):
+class User(AbstractUser):
     telegram_id = models.CharField(max_length=100, unique=True)
-    username = models.CharField(max_length=150)
     first_name = models.CharField(max_length=100)
     avatar = models.ImageField(upload_to='avatars/', null=True)
     score = models.IntegerField(default=0)

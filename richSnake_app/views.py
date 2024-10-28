@@ -47,7 +47,7 @@ def auth_view(request):
         avatar_url = get_telegram_user_photo(telegram_id)
 
         # Update or create user in the database with avatar URL
-        user, created = User.objects.get_or_create(
+        user, created = User.objects.update_or_create(
             telegram_id=telegram_id,
             defaults={
                 "first_name": first_name,
@@ -55,6 +55,28 @@ def auth_view(request):
                 "avatar": avatar_url
             }
         )
+
+        if 'referral_code' in request.POST:
+            referral_code = request.POST.get('referral_code')
+
+            try:
+                referrer = Referral.objects.get(referral_code=referral_code).user
+                if created:
+                    referral = Referral.objects.create(user=user)
+                    ReferredUser.objects.create(
+                        referred_by=referrer.referral, referred_user=user)
+                    referrer.score += 10
+                    referrer.save()
+                    token, created = Token.objects.get_or_create(user=user)
+
+                    return Response({'message': 'User created with referral, referrer earned 10 points token also created',"token": token.key}, status=status.HTTP_201_CREATED)
+
+            except Referral.DoesNotExist:
+                return Response({'error': 'Invalid referral code'}, status=status.HTTP_400_BAD_REQUEST)
+
+        elif created:
+            referral = Referral.objects.create(user=user)
+
 
         # Generate a token (for example, a random string here)
         token, created = Token.objects.get_or_create(user=user)
@@ -76,26 +98,6 @@ def get_or_create_user(request, telegram_id):
 
         serializer = UserSerializer(user)
         return Response({'user': serializer.data})
-
-    elif request.method == 'POST':
-        referral_code = request.data.get('referral_code')
-
-        try:
-            referrer = Referral.objects.get(referral_code=referral_code).user
-        except Referral.DoesNotExist:
-            return Response({'error': 'Invalid referral code'}, status=status.HTTP_400_BAD_REQUEST)
-
-        new_user, created = User.objects.get_or_create(telegram_id=telegram_id)
-        if created:
-            referral = Referral.objects.create(user=new_user)
-            ReferredUser.objects.create(
-                referred_by=referrer.referral, referred_user=new_user)
-            referrer.score += 10
-            referrer.save()
-            return Response({'message': 'User created with referral, referrer earned 10 points'}, status=status.HTTP_201_CREATED)
-
-        return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 # List users referred by a specific user
 @api_view(['GET'])
