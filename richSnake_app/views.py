@@ -18,9 +18,7 @@ import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.crypto import get_random_string
-
-BOT_TOKEN = "BOT_TOKEN"
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+import json
 
 @csrf_exempt
 @api_view(['POST'])
@@ -31,22 +29,25 @@ def auth_view(request):
         # Parse initData and extract hash and data
         parsed_data = dict(urllib.parse.parse_qsl(init_data))
         auth_date = int(parsed_data.get("auth_date", 0))
-        if time.time() - auth_date > 86400:  # 1-day expiry 86400
+        if time.time() - auth_date > 86400:  # 1-day expiry
             return JsonResponse({"error": "Session expired"}, status=403)
 
-        if validate_init_data(init_data, BOT_TOKEN):
+        if not validate_init_data(init_data, BOT_TOKEN):
             return JsonResponse({"error": "Invalid authentication data"}, status=403)
 
         # Auth data verified, process user info securely
-        telegram_id = parsed_data["id"]
-        first_name = parsed_data.get("first_name", "")
-        username = parsed_data.get("username", "")
+        user_data = json.loads(parsed_data['user'])
+
+        # Extract the id
+        telegram_id = user_data.get("id")
+        first_name = user_data.get("first_name", "")
+        username = user_data.get("username", "")
 
         # Fetch user's avatar photo
         avatar_url = get_telegram_user_photo(telegram_id)
 
         # Update or create user in the database with avatar URL
-        user, created = User.objects.update_or_create(
+        user, created = User.objects.get_or_create(
             telegram_id=telegram_id,
             defaults={
                 "first_name": first_name,
