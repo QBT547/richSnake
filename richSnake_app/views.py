@@ -86,13 +86,13 @@ def auth_view(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_or_create_user(request, telegram_id):
+def get_or_create_user(request):
     if request.method == 'GET':
         try:
-            user = User.objects.get(telegram_id=telegram_id)
+            user = User.objects.get(telegram_id=request.user.telegram_id)
         except User.DoesNotExist:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -103,9 +103,9 @@ def get_or_create_user(request, telegram_id):
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_referral_list_of_user(request, telegram_id):
+def get_referral_list_of_user(request):
     try:
-        user = User.objects.get(telegram_id=telegram_id)
+        user = User.objects.get(telegram_id=request.user.telegram_id)
         referral = user.referral
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -128,9 +128,9 @@ def get_referral_list_of_user(request, telegram_id):
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_mark_as_done_tasks(request, telegram_id):
+def get_mark_as_done_tasks(request):
     if request.method == 'GET':
-        user = get_object_or_404(User, telegram_id=telegram_id)
+        user = get_object_or_404(User, telegram_id= request.user.telegram_id)
 
         # Retrieve completed tasks
         completed_tasks = Task.objects.filter(task_users__user=user)
@@ -153,7 +153,7 @@ def get_mark_as_done_tasks(request, telegram_id):
         task_id = int(request.data.get('task_id', 0))
 
         try:
-            user = User.objects.get(telegram_id=telegram_id)
+            user = User.objects.get(telegram_id= request.user.telegram_id)
             task = Task.objects.get(id=task_id)
 
             # Check if the task is already completed
