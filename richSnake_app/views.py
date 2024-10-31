@@ -3,8 +3,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from richSnake_app.helpers import BOT_TOKEN, get_telegram_user_photo, validate_init_data
-from .models import User, Referral, ReferredUser, Task, UserTask
-from .serializers import UserSerializer, ReferredUserSerializer, TaskSerializer
+from .models import User, Referral, ReferredUser, Task, UserTask, Prize
+from .serializers import UserSerializer, ReferredUserSerializer, TaskSerializer, PrizeSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
@@ -20,6 +20,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.crypto import get_random_string
 import json
 
+
+# Create update user, create token for user, create refferal code for user
 @csrf_exempt
 @api_view(['POST'])
 def auth_view(request):
@@ -86,6 +88,7 @@ def auth_view(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
+# get Logged User (Home page)
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -122,9 +125,7 @@ def get_referral_list_of_user(request):
         "referral_code_of_user": referral.referral_code
     })
 
-# Get task list
-
-
+# Get task list &&& Mark as Done
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -173,3 +174,46 @@ def get_mark_as_done_tasks(request):
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         except Task.DoesNotExist:
             return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+# Get Prizes List &&&
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_prizes_list(request):
+    prizes = Prize.objects.all()
+    serializer = PrizeSerializer(prizes, many=True)
+
+    return Response({
+        'prize_list': serializer.data
+    })
+
+
+#  Get Leaderboard, user_rank, user
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def leaderboard_list(request):
+    users = User.objects.order_by('-score')[:100]
+    serializer = UserSerializer(users, many=True)
+
+    # Try to get the requesting user
+    try:
+        user = User.objects.get(telegram_id=request.user.telegram_id)
+    except User.DoesNotExist:
+        return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Calculate user rank in the complete ordered queryset
+    full_ordered_users = User.objects.order_by('-score')
+    user_rank = list(full_ordered_users).index(user) + 1
+
+    # Serialize the user's data
+    user_serializer = UserSerializer(user)
+
+    return Response({
+        'leaderBoard': serializer.data,
+        'user_rank': user_rank,
+        'user': user_serializer.data
+    })

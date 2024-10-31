@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Referral, ReferredUser, Task
+from .models import User, Referral, ReferredUser, Task, Prize
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -25,3 +25,8 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"
+
+class PrizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Prize
+        fields = '__all__'
