@@ -19,7 +19,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.crypto import get_random_string
 import json
-
+from django.core.files.base import ContentFile
 
 # Create update user, create token for user, create refferal code for user
 @csrf_exempt
@@ -54,9 +54,15 @@ def auth_view(request):
             defaults={
                 "first_name": first_name,
                 "username": username,
-                "avatar": avatar_url
             }
         )
+        if avatar_url:
+            response = requests.get(avatar_url)
+            if response.status_code == 200:
+                # Use a unique name for the file to avoid conflicts
+                avatar_filename = f"{telegram_id}_avatar.jpg"
+                user.avatar.save(avatar_filename, ContentFile(response.content), save=True)
+
 
         if 'referral_code' in request.POST:
             referral_code = request.POST.get('referral_code')
