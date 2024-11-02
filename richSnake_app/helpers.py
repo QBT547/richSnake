@@ -4,7 +4,8 @@ from urllib.parse import unquote
 
 import requests
 
-BOT_TOKEN = "7942185037:AAGHRARwj9S388Im3LZLsjrm4wj2a7bqno8"
+BOT_TOKEN = "8033456073:AAFzdw6i5KcAeTVQNpda_tnYly1cxO09_ao"
+# BOT_TOKEN = "7942185037:AAGHRARwj9S388Im3LZLsjrm4wj2a7bqno8"
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 

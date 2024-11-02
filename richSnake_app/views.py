@@ -26,10 +26,11 @@ from django.core.files.base import ContentFile
 @api_view(['POST'])
 def auth_view(request):
     if request.method == "POST":
-        init_data = request.POST.get("initData", "")
+        init_data = request.data.get("initData", "")
 
         # Parse initData and extract hash and data
         parsed_data = dict(urllib.parse.parse_qsl(init_data))
+
         auth_date = int(parsed_data.get("auth_date", 0))
         if time.time() - auth_date > 86400:  # 1-day expiry
             return JsonResponse({"error": "Session expired"}, status=403)
@@ -64,20 +65,25 @@ def auth_view(request):
                 user.avatar.save(avatar_filename, ContentFile(response.content), save=True)
 
 
-        if 'referral_code' in request.POST:
-            referral_code = request.POST.get('referral_code')
-
+        
+        referral_code = parsed_data.get("start_param")
+        if referral_code:
             try:
+                # Find referrer based on referral_code
                 referrer = Referral.objects.get(referral_code=referral_code).user
                 if created:
+                    # Create referral and referred user records
                     referral = Referral.objects.create(user=user)
-                    ReferredUser.objects.create(
-                        referred_by=referrer.referral, referred_user=user)
+                    ReferredUser.objects.create(referred_by=referrer.referral, referred_user=user)
                     referrer.score += 10
                     referrer.save()
-                    token, created = Token.objects.get_or_create(user=user)
 
-                    return Response({'message': 'User created with referral, referrer earned 10 points token also created',"token": token.key}, status=status.HTTP_201_CREATED)
+                    # Create a token for the user
+                    token, _ = Token.objects.get_or_create(user=user)
+                    return Response({
+                        'message': 'User created with referral, referrer earned 10 points, token also created',
+                        "token": token.key
+                    }, status=status.HTTP_201_CREATED)
 
             except Referral.DoesNotExist:
                 return Response({'error': 'Invalid referral code'}, status=status.HTTP_400_BAD_REQUEST)
@@ -105,8 +111,17 @@ def get_or_create_user(request):
         except User.DoesNotExist:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = UserSerializer(user)
-        return Response({'user': serializer.data})
+        data = {
+            "id":user.id,
+            "username":user.username,
+            "last_name":user.last_name,
+            "date_joined":user.date_joined,
+            "telegram_id":user.telegram_id,
+            "first_name":user.first_name,
+            "score":user.score,
+            "avatar": request.build_absolute_uri(user.avatar.url)
+        }
+        return Response(data)
 
 # List users referred by a specific user
 @api_view(['GET'])
