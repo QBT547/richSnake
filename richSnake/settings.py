@@ -142,3 +142,10 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+import os
+from dotenv import load_dotenv
+
+# Load the .env file
+load_dotenv()
