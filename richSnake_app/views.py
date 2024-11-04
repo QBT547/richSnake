@@ -57,7 +57,7 @@ def auth_view(request):
                 "username": username,
             }
         )
-        if avatar_url:
+        if avatar_url != None:
             response = requests.get(avatar_url)
             if response.status_code == 200:
                 # Use a unique name for the file to avoid conflicts
@@ -238,3 +238,14 @@ def leaderboard_list(request):
         'user_rank': user_rank,
         'user': user_serializer.data
     })
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_user_score(request):
+    user = User.objects.get(telegram_id=request.user.telegram_id)
+    score_to_add = request.data.get('score', 0)
+    user.score += float(score_to_add)
+    user.save()
+    return Response({'message': 'User score updated', 'new_score':
+    user.score})

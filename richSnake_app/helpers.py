@@ -4,9 +4,11 @@ from urllib.parse import unquote
 
 import requests
 import os
+from django.conf import settings
 
 # Access the BOT_TOKEN
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = settings.BOT_TOKEN
+
 
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
