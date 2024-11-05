@@ -24,6 +24,7 @@ def auth_view(request):
     if request.method == "POST":
         init_data = request.data.get("initData", "")
         BOT_TOKEN = settings.BOT_TOKEN
+        print(BOT_TOKEN)
 
         # Parse initData and extract hash and data
         parsed_data = dict(urllib.parse.parse_qsl(init_data))
@@ -122,13 +123,8 @@ def get_or_create_user(request):
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def get_referral_list_of_user(request):
-    try:
-        user = User.objects.get(telegram_id=request.user.telegram_id)
-        referral = user.referral
-    except User.DoesNotExist:
-        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Referral.DoesNotExist:
-        return Response({'error': 'Referral not found'}, status=status.HTTP_404_NOT_FOUND)
+    user = request.user
+    referral, created = Referral.objects.get_or_create(user=user)
 
     referred_users = referral.referred_users.all()
     total_score = sum([ru.earned_score for ru in referred_users])
