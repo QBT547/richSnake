@@ -1,9 +1,7 @@
 from django.conf import settings
-from django.shortcuts import render
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from richSnake_app.helpers import BOT_TOKEN, get_telegram_user_photo, validate_init_data
+from richSnake_app.helpers import get_telegram_user_photo, validate_init_data
 from .models import User, Referral, ReferredUser, Task, UserTask, Prize
 from .serializers import UserSerializer, ReferredUserSerializer, TaskSerializer, PrizeSerializer
 from django.shortcuts import get_object_or_404
