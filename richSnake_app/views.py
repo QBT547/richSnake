@@ -9,14 +9,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.authtoken.models import Token
-import hashlib
-import hmac
 import time
 import urllib.parse
 import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.crypto import get_random_string
 import json
 from django.core.files.base import ContentFile
 
@@ -26,6 +23,7 @@ from django.core.files.base import ContentFile
 def auth_view(request):
     if request.method == "POST":
         init_data = request.data.get("initData", "")
+        BOT_TOKEN = settings.BOT_TOKEN
 
         # Parse initData and extract hash and data
         parsed_data = dict(urllib.parse.parse_qsl(init_data))
@@ -46,7 +44,6 @@ def auth_view(request):
         username = user_data.get("username", "")
 
         # Fetch user's avatar photo
-        BOT_TOKEN = settings.BOT_TOKEN
         avatar_url = get_telegram_user_photo(telegram_id, BOT_TOKEN)
 
         # Update or create user in the database with avatar URL
