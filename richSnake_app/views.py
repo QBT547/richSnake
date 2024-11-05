@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.response import Response
@@ -47,7 +48,8 @@ def auth_view(request):
         username = user_data.get("username", "")
 
         # Fetch user's avatar photo
-        avatar_url = get_telegram_user_photo(telegram_id)
+        BOT_TOKEN = settings.BOT_TOKEN
+        avatar_url = get_telegram_user_photo(telegram_id, BOT_TOKEN)
 
         # Update or create user in the database with avatar URL
         user, created = User.objects.update_or_create(
@@ -64,8 +66,6 @@ def auth_view(request):
                 avatar_filename = f"{telegram_id}_avatar.jpg"
                 user.avatar.save(avatar_filename, ContentFile(response.content), save=True)
 
-
-        
         referral_code = parsed_data.get("start_param")
         if referral_code:
             try:
@@ -91,7 +91,6 @@ def auth_view(request):
         elif created:
             referral = Referral.objects.create(user=user)
 
-
         # Generate a token (for example, a random string here)
         token, created = Token.objects.get_or_create(user=user)
 
@@ -112,14 +111,14 @@ def get_or_create_user(request):
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
         data = {
-            "id":user.id,
-            "username":user.username,
-            "last_name":user.last_name,
-            "date_joined":user.date_joined,
-            "telegram_id":user.telegram_id,
-            "first_name":user.first_name,
-            "score":user.score,
-            "avatar": request.build_absolute_uri(user.avatar.url)
+            "id" : user.id,
+            "username" : user.username,
+            "last_name" : user.last_name,
+            "date_joined" : user.date_joined,
+            "telegram_id" : user.telegram_id,
+            "first_name" : user.first_name,
+            "score" : user.score,
+            "avatar": request.build_absolute_uri(user.avatar.url) if user.avatar else None
         }
         return Response(data)
 

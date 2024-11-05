@@ -3,15 +3,6 @@ import hmac
 from urllib.parse import unquote
 
 import requests
-import os
-from django.conf import settings
-
-# Access the BOT_TOKEN
-BOT_TOKEN = settings.BOT_TOKEN
-
-
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
-
 
 def validate_init_data(init_data: str, bot_token: str):
     vals = {k: unquote(v) for k, v in [s.split('=', 1)
@@ -25,9 +16,11 @@ def validate_init_data(init_data: str, bot_token: str):
     return h.hexdigest() == vals['hash']
 
 
-def get_telegram_user_photo(telegram_id):
+def get_telegram_user_photo(telegram_id, bot_token):
     """Fetches the Telegram user's avatar photo URL."""
     try:
+
+        TELEGRAM_API_URL = f"https://api.telegram.org/bot{bot_token}"
         # Step 1: Request user's profile photos
         response = requests.get(f"{TELEGRAM_API_URL}/getUserProfilePhotos", params={
             "user_id": telegram_id,
@@ -51,7 +44,7 @@ def get_telegram_user_photo(telegram_id):
             if file_data.get("ok"):
                 # Construct and return the file URL
                 file_path = file_data["result"]["file_path"]
-                return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+                return f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
 
     except requests.RequestException as e:
         # Log or handle network issues here
