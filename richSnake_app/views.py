@@ -207,7 +207,7 @@ def get_prizes_list(request):
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def leaderboard_list(request):
-    users = User.objects.order_by('-score')[:100]
+    users = User.objects.exclude(is_superuser=True).order_by('-score')[:100]
     serializer = UserSerializer(users, many=True)
 
     # Try to get the requesting user
