@@ -109,6 +109,10 @@ class ReferredUser(models.Model):
     class Meta:
         verbose_name_plural = 'ReferredUsers'
 
-
     def __str__(self):
         return f"{self.referred_user.username} reffered by {self.referred_by.user.username}"
+
+
+class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    expire_time = models.DateTimeField()

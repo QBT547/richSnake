@@ -1,8 +1,9 @@
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from richSnake_app.helpers import get_telegram_user_photo, validate_init_data
-from .models import User, Referral, ReferredUser, Task, UserTask, Prize
+from .models import User, Referral, ReferredUser, Task, UserTask, Prize, Subscription
 from .serializers import UserSerializer, ReferredUserSerializer, TaskSerializer, PrizeSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -86,6 +87,9 @@ def auth_view(request):
 
         elif user_created:
             referral = Referral.objects.create(user=user)
+
+        if user_created:
+            Subscription.objects.create(user=user, expire_time=timezone.now() + timezone.timedelta(days=3))
 
         # Generate a token (for example, a random string here)
         token, created = Token.objects.get_or_create(user=user)
@@ -246,3 +250,45 @@ def update_user_score(request):
         user.record = score_to_add
     user.save()
     return Response({'message': 'User score updated', 'new_score': user.score})
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_user_subscription(request):
+    try:
+        user = request.user
+        subscription = Subscription.objects.get(user=user)
+        
+        data = {
+            'id': subscription.id,
+            'user': user.id,
+            'expire_time': subscription.expire_time,
+            'is_active': subscription.expire_time > timezone.now()
+        }
+        
+        return Response(data, status=status.HTTP_200_OK)
+    
+    except Subscription.DoesNotExist:
+        return Response({'error': 'Subscription not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def buy_subscription(request):
+    user = request.user
+    cost = 1  # Cost of the subscription
+
+    if user.balance >= cost:
+        user.balance -= cost
+        user.save()
+
+        subscription = Subscription.objects.create(
+            user=user,
+            expire_time=timezone.now() + timezone.timedelta(days=30)
+        )
+
+        return Response({'message': 'Subscription purchased successfully'}, status=status.HTTP_200_OK)
+    else:
+        return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
