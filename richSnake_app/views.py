@@ -63,6 +63,9 @@ def auth_view(request):
                 avatar_filename = f"{telegram_id}_avatar.jpg"
                 user.avatar.save(avatar_filename, ContentFile(response.content), save=True)
 
+        if user_created:
+            Subscription.objects.create(user=user, expire_time=timezone.now() + timezone.timedelta(days=3))
+
         referral_code = parsed_data.get("start_param")
         if referral_code:
             try:
@@ -87,9 +90,6 @@ def auth_view(request):
 
         elif user_created:
             referral = Referral.objects.create(user=user)
-
-        if user_created:
-            Subscription.objects.create(user=user, expire_time=timezone.now() + timezone.timedelta(days=3))
 
         # Generate a token (for example, a random string here)
         token, created = Token.objects.get_or_create(user=user)
