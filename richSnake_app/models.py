@@ -1,14 +1,23 @@
+import random
+import string
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+
 # Create your models here.
 class Task(models.Model):
+    class Types(models.TextChoices):
+        COIN = "coin", "Coin"
+        DOLLAR = "dollar", "Dollar"
+
     source = models.CharField(max_length=255)
     source_image = models.ImageField(upload_to='task_images/', null=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     link = models.URLField()
     score = models.IntegerField()
+    type = models.CharField(max_length=20, choices=Types.choices, default="coin")
 
     class Meta:
         verbose_name_plural = 'Task'
@@ -16,11 +25,14 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
+
 class User(AbstractUser):
     telegram_id = models.CharField(max_length=100, unique=True)
     first_name = models.CharField(max_length=100)
     avatar = models.ImageField(upload_to='avatars/', null=True)
     score = models.IntegerField(default=0)
+    balance = models.IntegerField(default=1)
+    record = models.IntegerField(default=0)
     completed_tasks = models.ManyToManyField(Task, through='UserTask', related_name='completed_by')
 
     class Meta:
@@ -28,6 +40,21 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def generate_unique_username(self):
+        while True:
+            random_string = ''.join(random.choices(string.ascii_lowercase, k=7))
+            random_number = ''.join(random.choices(string.digits, k=3))
+            username = f"{random_string}{random_number}"
+
+            # Check if this username already exists
+            if not User.objects.filter(username=username).exists():
+                return username
+
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = self.generate_unique_username()
+        super().save(*args, **kwargs)
 
 
 class Prize(models.Model):
@@ -55,9 +82,7 @@ class UserTask(models.Model):
 
     def __str__(self):
         return self.user.username +' ' + self.task.title
-    
-import random
-import string
+
 
 class Referral(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='referral')
@@ -74,6 +99,7 @@ class Referral(models.Model):
 
     def __str__(self):
         return self.user.username
+
 
 class ReferredUser(models.Model):
     referred_by = models.ForeignKey(Referral, on_delete=models.CASCADE, related_name='referred_users')

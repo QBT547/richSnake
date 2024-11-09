@@ -175,9 +175,13 @@ def get_mark_as_done_tasks(request):
             # Create UserTask to mark task as completed
             UserTask.objects.create(user=user, task=task)
 
-            # Update user's score
-            user.score += task.score
-            user.save()
+            if task.type == Task.Types.COIN:
+                # Update user's score
+                user.score += task.score
+                user.save()
+            elif task.type == Task.Types.DOLLAR:
+                user.balance += task.score
+                user.save()
 
             return Response({'message': 'Task completed and score updated'}, status=status.HTTP_200_OK)
 
@@ -185,7 +189,6 @@ def get_mark_as_done_tasks(request):
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         except Task.DoesNotExist:
             return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
-
 
 
 # Get Prizes List &&&
@@ -229,6 +232,7 @@ def leaderboard_list(request):
         'user': user_serializer.data
     })
 
+
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -236,6 +240,7 @@ def update_user_score(request):
     user = User.objects.get(telegram_id=request.user.telegram_id)
     score_to_add = request.data.get('score', 0)
     user.score += float(score_to_add)
+    if score_to_add > user.record:
+        user.record = score_to_add
     user.save()
-    return Response({'message': 'User score updated', 'new_score':
-    user.score})
+    return Response({'message': 'User score updated', 'new_score': user.score})

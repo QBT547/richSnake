@@ -5,12 +5,14 @@ from .models import User, Referral, ReferredUser, Task, Prize
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username','first_name', 'score', 'avatar']
+        fields = ['username', 'first_name', 'score', 'balance', 'avatar']
+
 
 class ReferralSerializer(serializers.ModelSerializer):
     class Meta:
         model = Referral
         fields = '__all__'
+
 
 class ReferredUserSerializer(serializers.ModelSerializer):
     user = serializers.CharField(source='referred_user.username')
@@ -21,10 +23,12 @@ class ReferredUserSerializer(serializers.ModelSerializer):
         model = ReferredUser
         fields = ['user', 'coin', 'image']
 
+
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"
+
 
 class PrizeSerializer(serializers.ModelSerializer):
     class Meta:
