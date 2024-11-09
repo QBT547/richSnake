@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Prize, Task, Referral, ReferredUser, UserTask
+from .models import User, Prize, Task, Referral, ReferredUser, UserTask, Subscription
 from django.utils.html import format_html
 # Register your models here.
 
