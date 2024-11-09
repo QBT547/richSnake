@@ -262,7 +262,6 @@ def get_user_subscription(request):
         
         data = {
             'id': subscription.id,
-            'user': user.id,
             'expire_time': subscription.expire_time,
             'is_active': subscription.expire_time > timezone.now()
         }

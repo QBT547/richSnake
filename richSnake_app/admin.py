@@ -3,6 +3,8 @@ from .models import User, Prize, Task, Referral, ReferredUser, UserTask
 from django.utils.html import format_html
 # Register your models here.
 
+admin.site.register(Subscription)
+
 class UserAdmin(admin.ModelAdmin):
     list_display_links = ['photo_thumbnail', 'username',]
     list_display = ['photo_thumbnail','telegram_id', 'username', 'first_name', 'score']
