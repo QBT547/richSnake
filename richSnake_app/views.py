@@ -48,7 +48,7 @@ def auth_view(request):
         avatar_url = get_telegram_user_photo(telegram_id, BOT_TOKEN)
 
         # Update or create user in the database with avatar URL
-        user, created = User.objects.update_or_create(
+        user, user_created = User.objects.update_or_create(
             telegram_id=telegram_id,
             defaults={
                 "first_name": first_name,
@@ -67,11 +67,11 @@ def auth_view(request):
             try:
                 # Find referrer based on referral_code
                 referrer = Referral.objects.get(referral_code=referral_code).user
-                if created:
+                if user_created:
                     # Create referral and referred user records
                     referral = Referral.objects.create(user=user)
                     ReferredUser.objects.create(referred_by=referrer.referral, referred_user=user)
-                    referrer.score += 10
+                    referrer.score += 1000
                     referrer.save()
 
                     # Create a token for the user
@@ -84,13 +84,13 @@ def auth_view(request):
             except Referral.DoesNotExist:
                 return Response({'error': 'Invalid referral code'}, status=status.HTTP_400_BAD_REQUEST)
 
-        elif created:
+        elif user_created:
             referral = Referral.objects.create(user=user)
 
         # Generate a token (for example, a random string here)
         token, created = Token.objects.get_or_create(user=user)
 
-        return JsonResponse({"token": token.key})
+        return JsonResponse({"token": token.key, "is_new_user": user_created})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
