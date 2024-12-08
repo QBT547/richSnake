@@ -252,6 +252,19 @@ def update_user_score(request):
     return Response({'message': 'User score updated', 'new_score': user.score})
 
 
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_user_score_hard(request):
+    user = request.user
+    score_to_add = request.data.get('score', 0)
+    if score_to_add:
+        user.score = float(score_to_add)
+        user.save()
+        return Response({'message': 'User score updated', 'new_score': user.score})
+    return Response({'error': 'Invalid score value'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
