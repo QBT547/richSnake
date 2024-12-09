@@ -120,7 +120,8 @@ def get_or_create_user(request):
             "score" : user.score,
             "avatar": request.build_absolute_uri(user.avatar.url) if user.avatar else None,
             "balance": user.balance,
-            "record": user.record
+            "record": user.record,
+            "wallet_address": user.wallet_address
         }
         return Response(data)
 
