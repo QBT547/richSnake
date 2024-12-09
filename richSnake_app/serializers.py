@@ -5,7 +5,7 @@ from .models import User, Referral, ReferredUser, Task, Prize
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'score', 'balance', 'avatar']
+        fields = ['username', 'first_name', 'score', 'balance', 'avatar', "wallet_address"]
 
 
 class ReferralSerializer(serializers.ModelSerializer):

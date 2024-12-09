@@ -304,3 +304,14 @@ def buy_subscription(request):
         return Response({'message': 'Subscription purchased successfully'}, status=status.HTTP_200_OK)
     else:
         return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_wallet_address(request):
+    user = request.user
+    wallet_address = request.data.get('wallet_address', '')
+    user.wallet_address = wallet_address
+    user.save()
+    return Response({'message': 'Wallet address updated successfully'})

@@ -33,6 +33,7 @@ class User(AbstractUser):
     score = models.IntegerField(default=0)
     balance = models.IntegerField(default=1)
     record = models.IntegerField(default=0)
+    wallet_address = models.CharField(max_length=100, null=True, blank=True)
     completed_tasks = models.ManyToManyField(Task, through='UserTask', related_name='completed_by')
 
     class Meta:

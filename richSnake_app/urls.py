@@ -12,4 +12,5 @@ urlpatterns = [
     path('update_user_score_hard/', update_user_score_hard, name='update_user_score_hard'),
     path('subscription', get_user_subscription, name='get_user_subscription'),
     path('subscription/buy', buy_subscription, name='buy_subscription'),
+    path('update_wallet_address', update_wallet_address, name='update_wallet_address'),
 ]
