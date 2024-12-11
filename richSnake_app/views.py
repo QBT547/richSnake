@@ -272,7 +272,7 @@ def update_user_score_hard(request):
 def get_user_subscription(request):
     try:
         user = request.user
-        subscription = Subscription.objects.filter(user=user).first()
+        subscription = Subscription.objects.filter(user=user, active=True).first()
 
         if not subscription:
             data = {
@@ -303,7 +303,7 @@ def buy_subscription(request):
     if user.balance >= cost:
         user.balance -= cost
         user.save()
-
+        Subscription.objects.filter(user=user).delete()
         subscription = Subscription.objects.create(
             user=user,
             expire_time=timezone.now() + timezone.timedelta(days=30)
