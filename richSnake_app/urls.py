@@ -8,6 +8,7 @@ urlpatterns = [
     path('auth_view/', auth_view, name='auth_view'),
     path('get_prizes_list/', get_prizes_list, name='get_prizes_list'),
     path('leaderboard_list/', leaderboard_list, name='leaderboard_list'),
+    path('prizers_list/', prizers_list, name='prizers_list'),
     path('update_user_score/', update_user_score, name='update_user_score'),
     path('update_user_score_hard/', update_user_score_hard, name='update_user_score_hard'),
     path('subscription', get_user_subscription, name='get_user_subscription'),
