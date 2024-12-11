@@ -323,3 +323,30 @@ def update_wallet_address(request):
     user.wallet_address = wallet_address
     user.save()
     return Response({'message': 'Wallet address updated successfully'})
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def prizers_list(request):
+    users = User.objects.exclude(is_superuser=True).order_by('-balance')[:100]
+    serializer = UserSerializer(users, many=True)
+
+    # Try to get the requesting user
+    try:
+        user = User.objects.get(telegram_id=request.user.telegram_id)
+    except User.DoesNotExist:
+        return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Calculate user rank in the complete ordered queryset
+    full_ordered_users = User.objects.order_by('-balance')
+    user_rank = list(full_ordered_users).index(user) + 1
+
+    # Serialize the user's data
+    user_serializer = UserSerializer(user)
+
+    return Response({
+        'leaderBoard': serializer.data,
+        'user_rank': user_rank,
+        'user': user_serializer.data
+    })
