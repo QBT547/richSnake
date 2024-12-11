@@ -272,14 +272,21 @@ def update_user_score_hard(request):
 def get_user_subscription(request):
     try:
         user = request.user
-        subscription = Subscription.objects.get(user=user)
-        
-        data = {
-            'id': subscription.id,
-            'expire_time': subscription.expire_time,
-            'is_active': subscription.expire_time > timezone.now()
-        }
-        
+        subscription = Subscription.objects.filter(user=user).first()
+
+        if not subscription:
+            data = {
+                'id': subscription.id,
+                'expire_time': timezone.now(),
+                'is_active': False
+            }
+            return Response(data, status=status.HTTP_404_NOT_FOUND)
+        else:
+            data = {
+                'id': subscription.id,
+                'expire_time': subscription.expire_time,
+                'is_active': subscription.expire_time > timezone.now()
+            }
         return Response(data, status=status.HTTP_200_OK)
     
     except Subscription.DoesNotExist:
