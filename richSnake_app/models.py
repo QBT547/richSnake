@@ -158,6 +158,7 @@ class Payment(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    order_id = models.CharField(max_length=100, null=True, blank=True)
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.TELEGRAM)
     status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
     

@@ -66,7 +66,7 @@ def create_invoice(user, amount=50) -> dict:
         user=user,
         amount=amount,
         order_id=o_id,
-        type="telegram"
+        payment_method="telegram"
     )
 
     o_id = str(o_id) + "&&&" + str(payment.id)
