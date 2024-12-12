@@ -119,6 +119,7 @@ class ReferredUser(models.Model):
 class Subscription(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     expire_time = models.DateTimeField()
+    active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user.username}'s Subscription"

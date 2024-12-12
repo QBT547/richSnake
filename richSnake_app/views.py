@@ -498,7 +498,7 @@ def payment_status_webhook(request):
             user = User.objects.get(telegram_id=user_tg_id)
             Subscription.objects.filter(user=user).delete()
 
-            subscription = Subscription.objects.create(user=user, expire_time=timezone.now() + timedelta(days=30))
+            subscription = Subscription.objects.create(user=user, expire_time=timezone.now() + timedelta(days=30), active=True)
             
             print(f"[purchase successfull]: {user.username} - {subscription.expire_time}")
         except ObjectDoesNotExist:
