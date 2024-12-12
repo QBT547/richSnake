@@ -278,7 +278,7 @@ def get_user_subscription(request):
 
         if not subscription:
             data = {
-                'id': subscription.id,
+                'id': None,
                 'expire_time': timezone.now(),
                 'is_active': False
             }
