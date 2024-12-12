@@ -3,10 +3,10 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from richSnake_app.helpers import get_telegram_user_photo, validate_init_data
-from .models import User, Referral, ReferredUser, Task, UserTask, Prize, Subscription
-from .serializers import UserSerializer, ReferredUserSerializer, TaskSerializer, PrizeSerializer
+from .models import User, Referral, ReferredUser, Task, UserTask, Prize, Subscription, WithdrawRequest
+from .serializers import UserSerializer, ReferredUserSerializer, TaskSerializer, PrizeSerializer, WithdrawRequestSerializer
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.authtoken.models import Token
@@ -17,6 +17,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.core.files.base import ContentFile
+from decimal import Decimal, InvalidOperation
+from richSnake_app.helpers import create_invoice
 
 # Create update user, create token for user, create refferal code for user
 @csrf_exempt
@@ -317,6 +319,18 @@ def buy_subscription(request):
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
+def buy_subscription_telegram(request):
+    user = request.user
+    try:
+        invoice = create_invoice(user)
+        return Response(invoice, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def update_wallet_address(request):
     user = request.user
     wallet_address = request.data.get('wallet_address', '')
@@ -350,3 +364,149 @@ def prizers_list(request):
         'user_rank': user_rank,
         'user': user_serializer.data
     })
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def create_withdraw_request(request):
+    """
+    Create a new withdrawal request for the authenticated user.
+    
+    Required JSON parameters:
+    - amount: Decimal amount to withdraw
+    - wallet_address: Optional wallet address for the withdrawal
+    
+    Returns:
+    - Success: Withdrawal request details
+    - Error: Appropriate error message
+    """
+    user = request.user
+    
+    # Ensure user is authenticated
+    if not user.is_authenticated:
+        return Response({
+            'error': 'Authentication required'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    
+    # Parse request data
+    try:
+        amount = request.data.get('amount')
+        wallet_address = request.data.get('wallet_address', user.wallet_address)
+        
+        # Validate amount
+        if not amount:
+            return Response({
+                'error': 'Amount is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        amount = Decimal(amount)
+        
+        # Check if amount is positive
+        if amount <= 0:
+            return Response({
+                'error': 'Withdrawal amount must be positive'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if user has sufficient balance
+        if amount > user.balance:
+            return Response({
+                'error': 'Insufficient balance'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate wallet address
+        if not wallet_address:
+            return Response({
+                'error': 'Wallet address is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create withdrawal request
+        withdraw_request = WithdrawRequest.objects.create(
+            user=user,
+            amount=amount,
+            wallet_address=wallet_address,
+            status=WithdrawRequest.Status.PENDING
+        )
+        
+        # Temporarily reduce user balance (to prevent multiple withdrawals)
+        user.balance -= amount
+        user.save()
+        
+        # Serialize and return the withdrawal request
+        serializer = WithdrawRequestSerializer(withdraw_request)
+        
+        return Response({
+            'message': 'Withdrawal request created successfully',
+            'withdraw_request': serializer.data
+        }, status=status.HTTP_201_CREATED)
+    
+    except (ValueError, InvalidOperation) as e:
+        return Response({
+            'error': 'Invalid amount format'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Unexpected error in create_withdraw_request: {e}")
+        return Response({
+            'error': 'An unexpected error occurred'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@csrf_exempt  # Disable CSRF for webhook, if necessary
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def payment_status_webhook(request):
+    update = request.data
+    # Check if there is a successful payment in the update
+    if 'pre_checkout_query' in update:
+        print(f'[request.data]: {update}')
+        id = update.get('pre_checkout_query').get("id")
+        print(f'[pre checkout query]: {id}')
+        if id:
+            url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/answerPreCheckoutQuery"
+            data = {"pre_checkout_query_id": id, "ok": True}
+            res = requests.post(url, data=data)
+            print(f"[telegram bot response]: ", res.text)
+            return Response({"status": "success"})
+        print(f'[checkout query not found]')
+        return Response({"status": "success"})
+
+    elif 'successful_payment' in update.get("message", {}):
+        print(f'[request.data]: {update}')
+        order_id = update.get("message", {}).get("successful_payment", {}).get("invoice_payload")
+        print(f'[successful payment]: {order_id}')
+        payment_status = "paid"  # Since Telegram only sends successful payments here
+
+        # Update your payment record based on order ID
+        try:
+            user_tg_id = order_id.split("&&&")[0]
+            payment_id = int(order_id.split("&&&")[1])
+
+            payment = Payment.objects.get(order_id=user_tg_id, id=payment_id)
+            if payment.status == "paid":
+                print(f'[payment already marked as paid]')
+                return Response({"status": "fail"})
+            else:
+                payment.status = payment_status
+                payment.save()
+        except Exception as e:
+            print("[error, data not valid]", str(e))
+            return Response({"status": "fail"})
+
+        try:
+            user = User.objects.get(telegram_id=user_tg_id)
+            Subscription.objects.filter(user=user).delete()
+
+            subscription = Subscription.objects.create(user=user, expire_time=timezone.now() + timedelta(days=30))
+            
+            print(f"[purchase successfull]: {user.username} - {subscription.expire_time}")
+        except ObjectDoesNotExist:
+            print(f'[error]: User not found for order_id: {order_id}')
+
+        print('[response]: {"status": "success"}')
+        return Response({"status": "success"})
+    else:
+        print('[response]: {"status": "no payment update found"}')
+        return Response({"status": "no payment update found"}, status=400)
+

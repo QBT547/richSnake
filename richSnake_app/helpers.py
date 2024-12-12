@@ -1,6 +1,8 @@
 import hashlib
 import hmac
 from urllib.parse import unquote
+from django.conf import settings
+from richSnake_app.models import Payment
 
 import requests
 
@@ -55,3 +57,45 @@ def get_telegram_user_photo(telegram_id, bot_token):
 
     # Return None if no photo is found or if any error occurs
     return None
+
+
+def create_invoice(user, amount=50) -> dict:
+    o_id = user.telegram_id
+
+    payment = Payment.objects.create(
+        user=user,
+        amount=amount,
+        order_id=o_id,
+        type="telegram"
+    )
+
+    o_id = str(o_id) + "&&&" + str(payment.id)
+    print(f"[order_id]: {o_id}")
+    data = {
+        "title": "Rich Snake",
+        "description": "Subscription for Rich Snake",
+        "payload": o_id,
+        "provider_token": "",  # Token from BotFather
+        "currency": "XTR",
+        "prices": [
+            {"label": "Telegram Stars", "amount": amount}
+        ]
+    }
+
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/createInvoiceLink"
+    response = requests.post(url, json=data, headers=headers)
+
+    # Process the response
+    if 200 <= response.status_code < 300:
+        response_data = response.json()
+        if response_data['ok']:
+            return {"url": response_data['result']}
+        else:
+            raise Exception(f"Invoice creation failed: {response_data['description']}")
+    else:
+        raise Exception(f"Error: {response.status_code}; Body: {response.text}; Data: {data}")
+

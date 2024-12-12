@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Referral, ReferredUser, Task, Prize
+from .models import User, Referral, ReferredUser, Task, Prize, WithdrawRequest
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -34,3 +34,20 @@ class PrizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prize
         fields = '__all__'
+
+
+class WithdrawRequestSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = WithdrawRequest
+        fields = [
+            'id', 
+            'user', 
+            'amount', 
+            'status', 
+            'created_at', 
+            'updated_at', 
+            'wallet_address'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'status']

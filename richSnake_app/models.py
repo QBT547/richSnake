@@ -119,3 +119,59 @@ class ReferredUser(models.Model):
 class Subscription(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     expire_time = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.user.username}'s Subscription"
+
+
+class WithdrawRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='withdraw_requests')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    order_id = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    wallet_address = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = 'WithdrawRequests'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Withdraw Request for {self.user.username} - {self.amount} ({self.status})"
+
+
+class Payment(models.Model):
+    class PaymentMethod(models.TextChoices):
+        TELEGRAM = "telegram", "Telegram"
+
+    class PaymentStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.TELEGRAM)
+    status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name_plural = 'Payments'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['payment_method', 'status'])
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.amount} ({self.payment_method}, {self.status})"
+
