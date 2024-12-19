@@ -33,7 +33,7 @@ class User(AbstractUser):
     first_name = models.CharField(max_length=100)
     avatar = models.ImageField(upload_to='avatars/', null=True)
     score = models.IntegerField(default=0)
-    balance = models.IntegerField(default=1)
+    balance = models.IntegerField(default=0)
     record = models.IntegerField(default=0)
     wallet_address = models.CharField(max_length=100, null=True, blank=True)
     completed_tasks = models.ManyToManyField(Task, through='UserTask', related_name='completed_by')

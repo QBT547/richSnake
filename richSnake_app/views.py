@@ -66,7 +66,7 @@ def auth_view(request):
                 user.avatar.save(avatar_filename, ContentFile(response.content), save=True)
 
         if user_created:
-            Subscription.objects.create(user=user, expire_time=timezone.now() + timezone.timedelta(days=3))
+            Subscription.objects.create(user=user, expire_time=timezone.now() + timezone.timedelta(days=7))
 
         referral_code = parsed_data.get("start_param")
         if referral_code:
