@@ -16,4 +16,5 @@ urlpatterns = [
     path('update_wallet_address', update_wallet_address, name='update_wallet_address'),
     path('create_withdraw_request', create_withdraw_request, name='create_withdraw_request'),
     path('buy_subscription_telegram', buy_subscription_telegram, name='buy_subscription_telegram'),
+    path('payment_status_webhook', payment_status_webhook, name='payment_status_webhook'),
 ]

@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from richSnake_app.helpers import get_telegram_user_photo, validate_init_data
-from .models import User, Referral, ReferredUser, Task, UserTask, Prize, Subscription, WithdrawRequest
+from .models import Payment, User, Referral, ReferredUser, Task, UserTask, Prize, Subscription, WithdrawRequest
 from .serializers import UserSerializer, ReferredUserSerializer, TaskSerializer, PrizeSerializer, WithdrawRequestSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -328,6 +328,65 @@ def buy_subscription_telegram(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@csrf_exempt  # Disable CSRF for webhook, if necessary
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def payment_status_webhook(request):
+    update = request.data
+    # Check if there is a successful payment in the update
+    if 'pre_checkout_query' in update:
+        print(f'[request.data]: {update}')
+        id = update.get('pre_checkout_query').get("id")
+        print(f'[pre checkout query]: {id}')
+        if id:
+            url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/answerPreCheckoutQuery"
+            data = {"pre_checkout_query_id": id, "ok": True}
+            res = requests.post(url, data=data)
+            print(f"[telegram bot response]: ", res.text)
+            return Response({"status": "success"})
+        print(f'[checkout query not found]')
+        return Response({"status": "success"})
+
+    elif 'successful_payment' in update.get("message", {}):
+        print(f'[request.data]: {update}')
+        order_id = update.get("message", {}).get("successful_payment", {}).get("invoice_payload")
+        print(f'[successful payment]: {order_id}')
+
+        # Update your payment record based on order ID
+        try:
+            user_tg_id = order_id.split("&&&")[0]
+            payment_id = int(order_id.split("&&&")[1])
+
+            payment = Payment.objects.get(order_id=user_tg_id, id=payment_id)
+            if payment.status == Payment.PaymentStatus.COMPLETED:
+                print(f'[payment already marked as paid]')
+                return Response({"status": "fail"})
+            else:
+                payment.status = Payment.PaymentStatus.COMPLETED
+                payment.save()
+        except Exception as e:
+            print("[error, data not valid]", str(e))
+            return Response({"status": "fail"})
+
+        try:
+            user = User.objects.get(telegram_id=user_tg_id)
+            Subscription.objects.filter(user=user).delete()
+            subscription = Subscription.objects.create(
+                user=user,
+                expire_time=timezone.now() + timezone.timedelta(days=30)
+            )
+            print(f"[purchase successfull]: {user.username} - {subscription.expire_time}")
+        except Exception as e:
+            print(f'[error]: User not found for order_id: {order_id}')
+
+        print('[response]: {"status": "success"}')
+        return Response({"status": "success"})
+    else:
+        print('[response]: {"status": "no payment update found"}')
+        return Response({"status": "no payment update found"}, status=400)
+
+
+
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -451,62 +510,3 @@ def create_withdraw_request(request):
         return Response({
             'error': 'An unexpected error occurred'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@csrf_exempt  # Disable CSRF for webhook, if necessary
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def payment_status_webhook(request):
-    update = request.data
-    # Check if there is a successful payment in the update
-    if 'pre_checkout_query' in update:
-        print(f'[request.data]: {update}')
-        id = update.get('pre_checkout_query').get("id")
-        print(f'[pre checkout query]: {id}')
-        if id:
-            url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/answerPreCheckoutQuery"
-            data = {"pre_checkout_query_id": id, "ok": True}
-            res = requests.post(url, data=data)
-            print(f"[telegram bot response]: ", res.text)
-            return Response({"status": "success"})
-        print(f'[checkout query not found]')
-        return Response({"status": "success"})
-
-    elif 'successful_payment' in update.get("message", {}):
-        print(f'[request.data]: {update}')
-        order_id = update.get("message", {}).get("successful_payment", {}).get("invoice_payload")
-        print(f'[successful payment]: {order_id}')
-        payment_status = "paid"  # Since Telegram only sends successful payments here
-
-        # Update your payment record based on order ID
-        try:
-            user_tg_id = order_id.split("&&&")[0]
-            payment_id = int(order_id.split("&&&")[1])
-
-            payment = Payment.objects.get(order_id=user_tg_id, id=payment_id)
-            if payment.status == "paid":
-                print(f'[payment already marked as paid]')
-                return Response({"status": "fail"})
-            else:
-                payment.status = payment_status
-                payment.save()
-        except Exception as e:
-            print("[error, data not valid]", str(e))
-            return Response({"status": "fail"})
-
-        try:
-            user = User.objects.get(telegram_id=user_tg_id)
-            Subscription.objects.filter(user=user).delete()
-
-            subscription = Subscription.objects.create(user=user, expire_time=timezone.now() + timedelta(days=30), active=True)
-            
-            print(f"[purchase successfull]: {user.username} - {subscription.expire_time}")
-        except ObjectDoesNotExist:
-            print(f'[error]: User not found for order_id: {order_id}')
-
-        print('[response]: {"status": "success"}')
-        return Response({"status": "success"})
-    else:
-        print('[response]: {"status": "no payment update found"}')
-        return Response({"status": "no payment update found"}, status=400)
-
