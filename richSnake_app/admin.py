@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Prize, Task, Referral, ReferredUser, UserTask, Subscription
+from .models import User, Prize, Task, Referral, ReferredUser, UserTask, Subscription, WithdrawRequest
 from django.utils.html import format_html
 # Register your models here.
 
@@ -68,3 +68,4 @@ admin.site.register(Task, TaskAdmin)
 admin.site.register(Referral, ReferralAdmin)
 admin.site.register(ReferredUser, ReferredUserAdmin)
 admin.site.register(UserTask, UserTaskAdmin)
+admin.site.register(WithdrawRequest)
