@@ -21,6 +21,8 @@ from decimal import Decimal, InvalidOperation
 from richSnake_app.helpers import create_invoice
 
 # Create update user, create token for user, create refferal code for user
+
+
 @csrf_exempt
 @api_view(['POST'])
 def auth_view(request):
@@ -66,7 +68,7 @@ def auth_view(request):
                 user.avatar.save(avatar_filename, ContentFile(response.content), save=True)
 
         if user_created:
-            Subscription.objects.create(user=user, expire_time=timezone.now() + timezone.timedelta(days=7))
+            Subscription.objects.create(user=user, expire_time=timezone.now() + timezone.timedelta(days=500))
 
         referral_code = parsed_data.get("start_param")
         if referral_code:
@@ -113,13 +115,13 @@ def get_or_create_user(request):
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
         data = {
-            "id" : user.id,
-            "username" : user.username,
-            "last_name" : user.last_name,
-            "date_joined" : user.date_joined,
-            "telegram_id" : user.telegram_id,
-            "first_name" : user.first_name,
-            "score" : user.score,
+            "id": user.id,
+            "username": user.username,
+            "last_name": user.last_name,
+            "date_joined": user.date_joined,
+            "telegram_id": user.telegram_id,
+            "first_name": user.first_name,
+            "score": user.score,
             "avatar": request.build_absolute_uri(user.avatar.url) if user.avatar else None,
             "balance": user.balance,
             "record": user.record,
@@ -128,6 +130,8 @@ def get_or_create_user(request):
         return Response(data)
 
 # List users referred by a specific user
+
+
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -146,12 +150,14 @@ def get_referral_list_of_user(request):
     })
 
 # Get task list &&& Mark as Done
+
+
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def get_mark_as_done_tasks(request):
     if request.method == 'GET':
-        user = get_object_or_404(User, telegram_id= request.user.telegram_id)
+        user = get_object_or_404(User, telegram_id=request.user.telegram_id)
 
         # Retrieve completed tasks
         completed_tasks = Task.objects.filter(task_users__user=user)
@@ -174,7 +180,7 @@ def get_mark_as_done_tasks(request):
         task_id = int(request.data.get('task_id', 0))
 
         try:
-            user = User.objects.get(telegram_id= request.user.telegram_id)
+            user = User.objects.get(telegram_id=request.user.telegram_id)
             task = Task.objects.get(id=task_id)
 
             # Check if the task is already completed
@@ -227,7 +233,7 @@ def leaderboard_list(request):
         user = User.objects.get(telegram_id=request.user.telegram_id)
     except User.DoesNotExist:
         return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    
+
     # Calculate user rank in the complete ordered queryset
     full_ordered_users = User.objects.order_by('-score')
     user_rank = list(full_ordered_users).index(user) + 1
@@ -290,7 +296,7 @@ def get_user_subscription(request):
                 'is_active': subscription.expire_time > timezone.now()
             }
         return Response(data, status=status.HTTP_200_OK)
-    
+
     except Subscription.DoesNotExist:
         return Response({'error': 'Subscription not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -386,7 +392,6 @@ def payment_status_webhook(request):
         return Response({"status": "no payment update found"}, status=400)
 
 
-
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -410,7 +415,7 @@ def prizers_list(request):
         user = User.objects.get(telegram_id=request.user.telegram_id)
     except User.DoesNotExist:
         return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    
+
     # Calculate user rank in the complete ordered queryset
     full_ordered_users = User.objects.order_by('-balance')
     user_rank = list(full_ordered_users).index(user) + 1
@@ -431,54 +436,54 @@ def prizers_list(request):
 def create_withdraw_request(request):
     """
     Create a new withdrawal request for the authenticated user.
-    
+
     Required JSON parameters:
     - amount: Decimal amount to withdraw
     - wallet_address: Optional wallet address for the withdrawal
-    
+
     Returns:
     - Success: Withdrawal request details
     - Error: Appropriate error message
     """
     user = request.user
-    
+
     # Ensure user is authenticated
     if not user.is_authenticated:
         return Response({
             'error': 'Authentication required'
         }, status=status.HTTP_401_UNAUTHORIZED)
-    
+
     # Parse request data
     try:
         amount = request.data.get('amount')
         wallet_address = request.data.get('wallet_address', user.wallet_address)
-        
+
         # Validate amount
         if not amount:
             return Response({
                 'error': 'Amount is required'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         amount = Decimal(amount)
-        
+
         # Check if amount is positive
         if amount <= 0:
             return Response({
                 'error': 'Withdrawal amount must be positive'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Check if user has sufficient balance
         if amount > user.balance:
             return Response({
                 'error': 'Insufficient balance'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Validate wallet address
         if not wallet_address:
             return Response({
                 'error': 'Wallet address is required'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Create withdrawal request
         withdraw_request = WithdrawRequest.objects.create(
             user=user,
@@ -486,24 +491,24 @@ def create_withdraw_request(request):
             wallet_address=wallet_address,
             status=WithdrawRequest.Status.PENDING
         )
-        
+
         # Temporarily reduce user balance (to prevent multiple withdrawals)
         user.balance -= amount
         user.save()
-        
+
         # Serialize and return the withdrawal request
         serializer = WithdrawRequestSerializer(withdraw_request)
-        
+
         return Response({
             'message': 'Withdrawal request created successfully',
             'withdraw_request': serializer.data
         }, status=status.HTTP_201_CREATED)
-    
+
     except (ValueError, InvalidOperation) as e:
         return Response({
             'error': 'Invalid amount format'
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
     except Exception as e:
         # Log the error for debugging
         print(f"Unexpected error in create_withdraw_request: {e}")
