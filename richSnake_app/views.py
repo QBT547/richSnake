@@ -79,7 +79,7 @@ def auth_view(request):
                     # Create referral and referred user records
                     referral = Referral.objects.create(user=user)
                     ReferredUser.objects.create(referred_by=referrer.referral, referred_user=user)
-                    referrer.score += 1000
+                    referrer.score += 5000
                     referrer.save()
 
                     # Create a token for the user
